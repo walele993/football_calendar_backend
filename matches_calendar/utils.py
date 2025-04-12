@@ -1,5 +1,7 @@
+import pytz
 import requests
 from datetime import datetime
+from django.utils import timezone
 from matches_calendar.models import Team, Match
 
 def fetch_and_update_matches():
@@ -30,9 +32,14 @@ def fetch_and_update_matches():
                     
                     # Converti la data e l'ora in un oggetto datetime
                     try:
-                        match_date = datetime.strptime(f"{match_date_str} {match_time_str}", "%Y-%m-%d %H:%M")
+                        naive_datetime = datetime.strptime(f"{match_date_str} {match_time_str}", "%Y-%m-%d %H:%M")
                     except ValueError:
                         continue  # Se la data non è valida, salta questa partita
+
+                    # Imposta il fuso orario per il datetime
+                    # Ad esempio, se i match sono sempre UTC, usa pytz.utc per la conversione
+                    local_tz = pytz.timezone("Europe/Rome")  # Cambia il fuso orario a seconda del tuo caso
+                    aware_datetime = local_tz.localize(naive_datetime)
 
                     # Estrai i punteggi dal risultato
                     try:
@@ -44,30 +51,18 @@ def fetch_and_update_matches():
                     home_team, created = Team.objects.get_or_create(name=home_team_name)
                     away_team, created = Team.objects.get_or_create(name=away_team_name)
 
-                    # Verifica se la partita esiste già usando matchday, home_team e away_team
-                    match, created = Match.objects.get_or_create(
+                    # Controlla se la partita esiste già e aggiornala se necessario
+                    match, created = Match.objects.update_or_create(
                         home_team=home_team,
                         away_team=away_team,
-                        competition=league,
+                        date=aware_datetime,
+                        competition=league, 
                         season=season,
-                        matchday=matchday.get('name', 'Unknown Matchday')  # Assuming matchday has a 'name'
+                        defaults={
+                            'score_home': score_home,
+                            'score_away': score_away,
+                        }
                     )
-
-                    # Se la partita esiste già, aggiorna i punteggi, orario e data
-                    if not created:
-                        # Aggiorna solo i punteggi e l'orario se diverso
-                        if match.score_home != score_home or match.score_away != score_away:
-                            match.score_home = score_home
-                            match.score_away = score_away
-                        
-                        # Se vuoi aggiornare anche l'orario
-                        match.date = match_date  # Se la data/ora è cambiata
-                        
-                        match.save()  # Salva le modifiche
-
-                    # Se la partita è nuova, verrà creata automaticamente da get_or_create()
-                    else:
-                        print(f"Partita creata: {home_team.name} vs {away_team.name} il {match.date}")
 
         return "Matches fetched and updated successfully!"
     except requests.RequestException as e:
