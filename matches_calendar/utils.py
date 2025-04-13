@@ -1,69 +1,78 @@
-import pytz
-import requests
+import os
+import glob
+import json
 from datetime import datetime
-from django.utils import timezone
 from matches_calendar.models import Team, Match
 
-def fetch_and_update_matches():
-    url = "https://raw.githubusercontent.com/walele993/football_calendar_project/main/all_matches.json"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
+def update_matches_from_json_folder(folder='parsed_json'):
+    """
+    Reads all JSON files in the specified folder (each containing data for a competition/season)
+    and updates the database accordingly.
+    The unique match is determined by the combination of matchday, home_team, and away_team.
+    """
+    json_files = glob.glob(os.path.join(folder, '*.json'))
+    for json_file in json_files:
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"[ERROR] Cannot load {json_file}: {e}")
+            continue
 
-        # La radice è una lista, quindi possiamo iterare direttamente su di essa
-        for season_data in data:  # Itera sulla lista delle stagioni
-            league = season_data.get('league', 'Unknown League')
-            season = season_data.get('season', 'Unknown Season')
-            
-            # Itera su ogni matchday
-            for matchday in season_data.get('matchdays', []):
-                for match_data in matchday.get('matches', []):
-                    # Estrai le informazioni dalla partita
-                    home_team_name = match_data.get('home_team')
-                    away_team_name = match_data.get('away_team')
-                    match_date_str = match_data.get('date')
-                    match_time_str = match_data.get('time')
-                    full_time_result = match_data.get('result', {}).get('full_time')
+        # Extract league, season, and matchdays from the JSON
+        league = data.get("league", "Unknown League")
+        season = data.get("season", "Unknown Season")
+        matchdays = data.get("matchdays", [])
+        
+        for md in matchdays:
+            md_name = md.get("matchday", "Unknown Matchday")
+            matches = md.get("matches", [])
+            for match_data in matches:
+                date_str = match_data.get("date")
+                time_str = match_data.get("time")
+                home_team_name = match_data.get("home_team")
+                away_team_name = match_data.get("away_team")
+                result = match_data.get("result", {})
 
-                    if not home_team_name or not away_team_name or not match_date_str or not match_time_str or not full_time_result:
-                        # Se i dati sono incompleti, salta questa partita
-                        continue
+                # Combine date and time if available.
+                try:
+                    dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                except Exception as e:
+                    print(f"[DEBUG] Error parsing datetime for match {home_team_name} vs {away_team_name}: {e}")
+                    dt = None
+
+                # Parse score from result's full_time field if exists.
+                score_home = None
+                score_away = None
+                if isinstance(result, dict):
+                    full_time = result.get("full_time")
+                    if full_time:
+                        try:
+                            score_home, score_away = map(int, full_time.split('-'))
+                        except Exception as e:
+                            print(f"[DEBUG] Error parsing score for {home_team_name} vs {away_team_name}: {e}")
+                            score_home, score_away = None, None
+
+                # Get or create the team instances.
+                home_team, _ = Team.objects.get_or_create(name=home_team_name)
+                away_team, _ = Team.objects.get_or_create(name=away_team_name)
+
+                # Update or create the match based on unique combination of matchday, home_team, and away_team.
+                match, created = Match.objects.update_or_create(
+                    matchday=md_name,
+                    home_team=home_team,
+                    away_team=away_team,
+                    defaults={
+                        "date": dt,
+                        "score_home": score_home,
+                        "score_away": score_away,
+                        "competition": league,
+                        "season": season,
+                    }
+                )
+                if created:
+                    print(f"[INFO] Created match: {home_team_name} vs {away_team_name} on {md_name}")
+                else:
+                    print(f"[INFO] Updated match: {home_team_name} vs {away_team_name} on {md_name}")
                     
-                    # Converti la data e l'ora in un oggetto datetime
-                    try:
-                        naive_datetime = datetime.strptime(f"{match_date_str} {match_time_str}", "%Y-%m-%d %H:%M")
-                    except ValueError:
-                        continue  # Se la data non è valida, salta questa partita
-
-                    # Imposta il fuso orario per il datetime
-                    # Ad esempio, se i match sono sempre UTC, usa pytz.utc per la conversione
-                    local_tz = pytz.timezone("Europe/Rome")  # Cambia il fuso orario a seconda del tuo caso
-                    aware_datetime = local_tz.localize(naive_datetime)
-
-                    # Estrai i punteggi dal risultato
-                    try:
-                        score_home, score_away = map(int, full_time_result.split('-'))
-                    except ValueError:
-                        score_home, score_away = None, None  # Se il punteggio non è valido, lascialo a None
-
-                    # Trova o crea i team
-                    home_team, created = Team.objects.get_or_create(name=home_team_name)
-                    away_team, created = Team.objects.get_or_create(name=away_team_name)
-
-                    # Controlla se la partita esiste già e aggiornala se necessario
-                    match, created = Match.objects.update_or_create(
-                        home_team=home_team,
-                        away_team=away_team,
-                        date=aware_datetime,
-                        competition=league, 
-                        season=season,
-                        defaults={
-                            'score_home': score_home,
-                            'score_away': score_away,
-                        }
-                    )
-
-        return "Matches fetched and updated successfully!"
-    except requests.RequestException as e:
-        return f"Error fetching data: {e}"
+    return "Matches updated from JSON folder successfully!"
