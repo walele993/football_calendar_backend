@@ -33,3 +33,6 @@ venv/
 
 # Windows
 Thumbs.db
+
+# Temporary repo
+temp_repo/
