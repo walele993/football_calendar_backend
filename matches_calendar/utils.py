@@ -109,6 +109,7 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                     matchday=md_name,
                     home_team=home_team,
                     away_team=away_team,
+                    season=season,
                     defaults={
                         "date": dt,
                         "score_home": score_home,
