@@ -2,8 +2,8 @@ name: Update Matches Nightly
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Eseguito ogni giorno alle 03:00 UTC (le 02:00 in Italia)
-  workflow_dispatch:      # Permette anche l'esecuzione manuale
+    - cron: '0 3 * * *'  # Ogni giorno alle 03:00 UTC
+  workflow_dispatch:      # Anche esecuzione manuale
 
 jobs:
   update:
@@ -23,10 +23,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run migrations
-        run: python manage.py migrate
-        run: python manage.py makemigrations
-        
       - name: Set environment variables
         run: |
           echo "DJANGO_SECRET_KEY=${{ secrets.SECRET_KEY }}" >> $GITHUB_ENV
@@ -36,8 +32,25 @@ jobs:
           echo "DATABASE_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
           echo "DATABASE_PORT=${{ secrets.DB_PORT }}" >> $GITHUB_ENV
 
-      - name: Run migrations
+      - name: Run makemigrations
+        run: python manage.py makemigrations
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+
+      - name: Run migrate
         run: python manage.py migrate
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
 
       - name: Run update_matches command
         run: python manage.py update_matches
