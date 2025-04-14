@@ -23,6 +23,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run migrations
+        run: python manage.py migrate
+        run: python manage.py makemigrations
+        
       - name: Set environment variables
         run: |
           echo "DJANGO_SECRET_KEY=${{ secrets.SECRET_KEY }}" >> $GITHUB_ENV
