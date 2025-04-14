@@ -2,8 +2,8 @@ name: Update Matches Nightly
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Ogni giorno alle 03:00 UTC
-  workflow_dispatch:      # Anche esecuzione manuale
+    - cron: '0 3 * * *'  
+  workflow_dispatch:     
 
 jobs:
   update:
