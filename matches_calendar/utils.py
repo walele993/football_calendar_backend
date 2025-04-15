@@ -20,7 +20,7 @@ def on_rm_error(func, path, exc_info):
     except Exception as e:
         logger.error(f"Failed to remove {path}: {e}")
 
-def is_season_valid(filename, min_season_start=2022):
+def is_season_valid(filename, min_season_start=2024):
     """
     Extracts the starting year from the filename, which is expected to begin with (YYYY-YY),
     and checks if it's >= min_season_start.
