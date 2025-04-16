@@ -22,7 +22,7 @@ def on_rm_error(func, path, exc_info):
 
 def is_season_valid(filename, min_season_start=2024):
     """
-    Extracts the starting year from the filename, which is expected to begin with (YYYY-YY),
+    Extracts the starting year from the filename, which is expected to begin with (YYYY_YY),
     and checks if it's >= min_season_start.
     """
     match = re.match(r"\((\d{4})_\d{2}\)", os.path.basename(filename))
@@ -49,8 +49,6 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
         return
 
     all_json_files = glob.glob(os.path.join(temp_dir, folder, '*.json'))
-
-    # 🔍 Filtra solo le stagioni dal 2022-23 in poi
     json_files = [f for f in all_json_files if is_season_valid(f)]
 
     total_files = len(json_files)
@@ -59,8 +57,8 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
     updated_matches = 0
 
     if total_files == 0:
-        logger.warning(f"No valid JSON files (from 2022-23) found in folder {folder}.")
-    
+        logger.warning(f"No valid JSON files (from 2024 onwards) found in folder {folder}.")
+
     for json_file in json_files:
         logger.info(f"Processing file: {json_file}")
         try:
@@ -109,13 +107,12 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                     matchday=md_name,
                     home_team=home_team,
                     away_team=away_team,
+                    competition=league,
                     season=season,
                     defaults={
                         "date": dt,
                         "score_home": score_home,
                         "score_away": score_away,
-                        "competition": league,
-                        "season": season,
                     }
                 )
 
