@@ -2,17 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "manage.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxDuration": 10
-      }
+      "src": "football_calendar_backend/wsgi.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/manage.py"
+      "dest": "football_calendar_backend/wsgi.py"
     }
   ]
 }
