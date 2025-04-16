@@ -5,7 +5,7 @@ import shutil
 import stat
 import subprocess
 from datetime import datetime
-from matches_calendar.models import Team, Match
+from matches_calendar.models import Team, Match, League
 import logging
 import re
 
