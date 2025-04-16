@@ -14,13 +14,15 @@ class League(models.Model):
         return self.name
 
 class Match(models.Model):
-    home_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='home_matches')
-    away_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='away_matches')
-    date = models.DateTimeField(null=True, blank=True)
+    matchday = models.IntegerField()
+    date = models.DateTimeField()
+    home_team = models.ForeignKey(Team, related_name="home_matches", on_delete=models.CASCADE)
+    away_team = models.ForeignKey(Team, related_name="away_matches", on_delete=models.CASCADE)
     score_home = models.IntegerField(null=True, blank=True)
     score_away = models.IntegerField(null=True, blank=True)
+    league = models.ForeignKey(League, on_delete=models.CASCADE)
+    season = models.CharField(max_length=255, null=True, blank=True)
     is_cancelled = models.BooleanField(default=False)
-    competition = models.ForeignKey(League, on_delete=models.CASCADE, related_name='matches')
 
     def __str__(self):
         return f"{self.home_team} vs {self.away_team} ({self.competition.name})"
