@@ -7,7 +7,7 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
-class Competition(models.Model):
+class League(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
@@ -20,7 +20,7 @@ class Match(models.Model):
     score_home = models.IntegerField(null=True, blank=True)
     score_away = models.IntegerField(null=True, blank=True)
     is_cancelled = models.BooleanField(default=False)
-    competition = models.ForeignKey(Competition, on_delete=models.CASCADE, related_name='matches')
+    competition = models.ForeignKey(League, on_delete=models.CASCADE, related_name='matches')
 
     def __str__(self):
         return f"{self.home_team} vs {self.away_team} ({self.competition.name})"
