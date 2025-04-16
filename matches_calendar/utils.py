@@ -5,7 +5,7 @@ import shutil
 import stat
 import subprocess
 from datetime import datetime
-from matches_calendar.models import Team, Match, League
+from matches_calendar.models import Team, Match, League  # Assicurati che 'League' sia importato
 import logging
 import re
 
@@ -68,7 +68,10 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
             logger.error(f"Cannot load {json_file}: {e}")
             continue
 
-        league = data.get("league", "Unknown League")
+        # Creare o ottenere la lega dal nome
+        league_name = data.get("league", "Unknown League")
+        league, _ = League.objects.get_or_create(name=league_name)
+
         season = data.get("season", "Unknown Season")
         matchdays = data.get("matchdays", [])
 
@@ -100,14 +103,16 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                         except Exception as e:
                             logger.debug(f"Error parsing score for {home_team_name} vs {away_team_name}: {e}")
 
+                # Ottenere o creare le squadre
                 home_team, _ = Team.objects.get_or_create(name=home_team_name)
                 away_team, _ = Team.objects.get_or_create(name=away_team_name)
 
+                # Creare o aggiornare la partita
                 match, created = Match.objects.update_or_create(
                     matchday=md_name,
                     home_team=home_team,
                     away_team=away_team,
-                    league=league,
+                    league=league,  # Ora è un oggetto League
                     season=season,
                     defaults={
                         "date": dt,
