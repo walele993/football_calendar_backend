@@ -1,26 +1,14 @@
 {
-  "version": 2,
   "builds": [
     {
-      "src": "manage.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "build.sh",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "staticfiles"
-      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "manage.py"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "dest": "api/index.py"
     }
   ]
 }
