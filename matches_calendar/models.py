@@ -15,12 +15,12 @@ class League(models.Model):
 
 class Match(models.Model):
     matchday = models.IntegerField()
-    date = models.DateTimeField()
+    date = models.DateField(null=False)
     home_team = models.ForeignKey(Team, related_name="home_matches", on_delete=models.CASCADE)
     away_team = models.ForeignKey(Team, related_name="away_matches", on_delete=models.CASCADE)
     score_home = models.IntegerField(null=True, blank=True)
     score_away = models.IntegerField(null=True, blank=True)
-    league = models.ForeignKey(League, on_delete=models.CASCADE)
+    league = models.ForeignKey(League, on_delete=models.CASCADE, default="Unknown League")
     season = models.CharField(max_length=255, null=True, blank=True)
     is_cancelled = models.BooleanField(default=False)
 
