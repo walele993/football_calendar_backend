@@ -5,7 +5,7 @@ import shutil
 import stat
 import subprocess
 from datetime import datetime
-from matches_calendar.models import Team, Match, League  # Assicurati che 'League' sia importato
+from matches_calendar.models import Team, Match, League
 import logging
 import re
 
@@ -21,10 +21,6 @@ def on_rm_error(func, path, exc_info):
         logger.error(f"Failed to remove {path}: {e}")
 
 def is_season_valid(filename, min_season_start=2023):
-    """
-    Extracts the starting year from the filename, which is expected to begin with (YYYY_YY),
-    and checks if it's >= min_season_start.
-    """
     match = re.match(r"\((\d{4})_\d{2}\)", os.path.basename(filename))
     if match:
         year = int(match.group(1))
@@ -48,8 +44,20 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
         logger.error(f"Error cloning repository: {e}")
         return
 
-    all_json_files = glob.glob(os.path.join(temp_dir, folder, '*.json'))
+    # Check if the folder exists
+    parsed_json_path = os.path.join(temp_dir, folder)
+    if not os.path.exists(parsed_json_path):
+        logger.error(f"[ERROR] Folder '{folder}' not found in the cloned repo.")
+        print(f"[ERROR] Folder '{folder}' not found in the cloned repo.")
+        return f"Folder '{folder}' not found in the cloned repo."
+
+    all_json_files = glob.glob(os.path.join(parsed_json_path, '*.json'))
+    print(f"Found {len(all_json_files)} .json files in {folder}/:")
+    for f in all_json_files:
+        print(" -", f)
+
     json_files = [f for f in all_json_files if is_season_valid(f)]
+    print(f"Valid JSON files (from 2023 onwards): {len(json_files)}")
 
     total_files = len(json_files)
     total_matches = 0
@@ -57,7 +65,7 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
     updated_matches = 0
 
     if total_files == 0:
-        logger.warning(f"No valid JSON files (from 2024 onwards) found in folder {folder}.")
+        logger.warning(f"No valid JSON files (from 2023 onwards) found in folder {folder}.")
 
     for json_file in json_files:
         logger.info(f"Processing file: {json_file}")
@@ -68,7 +76,6 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
             logger.error(f"Cannot load {json_file}: {e}")
             continue
 
-        # Creare o ottenere la lega dal nome
         league_name = data.get("league", "Unknown League")
         league, _ = League.objects.get_or_create(name=league_name)
 
@@ -103,16 +110,14 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                         except Exception as e:
                             logger.debug(f"Error parsing score for {home_team_name} vs {away_team_name}: {e}")
 
-                # Ottenere o creare le squadre
                 home_team, _ = Team.objects.get_or_create(name=home_team_name)
                 away_team, _ = Team.objects.get_or_create(name=away_team_name)
 
-                # Creare o aggiornare la partita
                 match, created = Match.objects.update_or_create(
                     matchday=md_name,
                     home_team=home_team,
                     away_team=away_team,
-                    league=league,  # Ora è un oggetto League
+                    league=league,
                     season=season,
                     defaults={
                         "date": dt,
@@ -134,4 +139,5 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
         logger.error(f"Error during cleanup of temporary directory: {e}")
 
     logger.info(f"Processed {total_files} JSON files, total matches: {total_matches}, created: {created_matches}, updated: {updated_matches}")
+    print(f"Done. Total files: {total_files}, matches: {total_matches}, created: {created_matches}, updated: {updated_matches}")
     return "Matches updated from remote repository successfully!"
