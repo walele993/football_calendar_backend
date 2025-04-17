@@ -62,7 +62,7 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
         return f"Folder '{folder}' not found in the cloned repo."
 
     print("[INFO] Reading JSON files...")
-    all_json_files = glob.glob(os.path.join(parsed_json_path, '*.json'))
+    all_json_files = glob.glob(os.path.join(temp_dir, folder, '*.json'))
     print(f"[INFO] Found {len(all_json_files)} .json files in '{folder}'.")
 
     json_files = [f for f in all_json_files if is_season_valid(f)]
