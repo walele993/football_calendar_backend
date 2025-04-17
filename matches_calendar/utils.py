@@ -20,7 +20,7 @@ def on_rm_error(func, path, exc_info):
     except Exception as e:
         logger.error(f"Failed to remove {path}: {e}")
 
-def is_season_valid(filename, min_season_start=2023):
+def is_season_valid(filename, min_season_start=2024):
     match = re.match(r"\((\d{4})_\d{2}\)", os.path.basename(filename))
     if match:
         year = int(match.group(1))
@@ -31,14 +31,14 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
     start_time = time.time()
     temp_dir = 'temp_repo'
 
-    print("[INFO] Starting match update process...")
-    print(f"[INFO] Repository: {repo_url}")
-    print(f"[INFO] Branch: {branch}")
-    print(f"[INFO] Target folder inside repo: {folder}")
+    logger.info("Starting match update process...")
+    logger.info(f"Repository: {repo_url}")
+    logger.info(f"Branch: {branch}")
+    logger.info(f"Target folder inside repo: {folder}")
 
     # Step 1: Delete temp repo if exists
     if os.path.exists(temp_dir):
-        print("[INFO] Removing existing temp directory...")
+        logger.info("Removing existing temp directory...")
         try:
             shutil.rmtree(temp_dir, onerror=on_rm_error)
         except Exception as e:
@@ -47,9 +47,9 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
 
     # Step 2: Clone repo
     try:
-        print("[INFO] Cloning repository...")
+        logger.info("Cloning repository...")
         subprocess.run(['git', 'clone', '--depth', '1', '-b', branch, repo_url, temp_dir], check=True)
-        print("[INFO] Clone completed.")
+        logger.info("Clone completed.")
     except Exception as e:
         logger.error(f"Error cloning repository: {e}")
         return
@@ -58,15 +58,13 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
     parsed_json_path = os.path.join(temp_dir, folder)
     if not os.path.exists(parsed_json_path):
         logger.error(f"Folder '{folder}' not found in the cloned repo.")
-        print("[ERROR] Folder not found:", parsed_json_path)
         return f"Folder '{folder}' not found in the cloned repo."
 
-    print("[INFO] Reading JSON files...")
-    all_json_files = glob.glob(os.path.join(temp_dir, folder, '*.json'))
-    print(f"[INFO] Found {len(all_json_files)} .json files in '{folder}'.")
+    all_json_files = glob.glob(os.path.join(parsed_json_path, '*.json'))
+    logger.info(f"Found {len(all_json_files)} .json files in '{folder}'.")
 
     json_files = [f for f in all_json_files if is_season_valid(f)]
-    print(f"[INFO] Valid JSON files (from 2023 onwards): {len(json_files)}")
+    logger.info(f"Valid JSON files (from 2023 onwards): {len(json_files)}")
 
     total_files = len(json_files)
     total_matches = 0
@@ -78,7 +76,7 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
         return "No valid JSON files found."
 
     for json_file in json_files:
-        print(f"[INFO] Processing {json_file}")
+        logger.info(f"Processing {json_file}")
         try:
             with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -139,19 +137,38 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
 
                 if created:
                     created_matches += 1
+                    logger.info(f"Created match: {home_team_name} vs {away_team_name} on {md_name}")
                 else:
-                    updated_matches += 1
+                    existing = Match.objects.get(
+                        matchday=md_name,
+                        home_team=home_team,
+                        away_team=away_team,
+                        league=league,
+                        season=season,
+                    )
+                    if (
+                        existing.date != dt or
+                        existing.score_home != score_home or
+                        existing.score_away != score_away or
+                        existing.is_cancelled != is_cancelled
+                    ):
+                        updated_matches += 1
+                        logger.info(f"Updated match: {home_team_name} vs {away_team_name} on {md_name}")
+                    else:
+                        logger.info(f"No changes: {home_team_name} vs {away_team_name} on {md_name}")
+
+        logger.info(f"Finished processing {json_file}")
 
     # Cleanup
     try:
         shutil.rmtree(temp_dir, onerror=on_rm_error)
-        print("[INFO] Temp directory removed.")
+        logger.info("Temp directory removed.")
     except Exception as e:
         logger.error(f"Cleanup error: {e}")
 
     end_time = time.time()
-    print(f"[INFO] Update complete in {round(end_time - start_time, 2)}s")
-    print(f"[INFO] Files processed: {total_files}")
-    print(f"[INFO] Matches total: {total_matches}, created: {created_matches}, updated: {updated_matches}")
+    logger.info(f"Update complete in {round(end_time - start_time, 2)}s")
+    logger.info(f"Files processed: {total_files}")
+    logger.info(f"Matches total: {total_matches}, created: {created_matches}, updated: {updated_matches}")
 
     return "Matches updated successfully!"
