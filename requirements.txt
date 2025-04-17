@@ -2,4 +2,3 @@ Django>=5.2
 djangorestframework
 psycopg2-binary
 whitenoise
-vercel-python
