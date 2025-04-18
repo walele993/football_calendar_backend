@@ -1,28 +1,36 @@
 # ⚽ Football Calendar Backend
 
-*Automate football match data extraction and populate a database with Django for various leagues!*  
+*Automate football match data integration with Django and PostgreSQL, powered by pre-processed openfootball data.*
 
 ---
 
 ## 🚀 Introduction
 
-**Football Calendar Backend** is a Django-based backend project designed to fetch football match data, process it, and store it in a PostgreSQL database. The project extracts match data from a public JSON file, organizes it by matchdays, and tracks match results. This backend is ready for integration with frontend applications that require real-time football match data.
+**Football Calendar Backend** is a Django-based backend that fetches, processes, and stores football match data into a PostgreSQL database.  
+Match data is sourced from **openfootball**, but pre-processed and cleaned via a custom pipeline in [**football_calendar_project**](https://github.com/walele993/football_calendar_project).
 
-### Key Features
-- 🏆 **Matchday Organization**: Automatically organizes match results by competition, season, and matchday.
-- 📅 **Comprehensive Calendar**: Supports multiple leagues and seasons, handling matchups, times, and results.
-- 🔄 **Automatic Data Fetching**: Fetches match data from a public JSON file and updates the database.
-- 🗂️ **Easy Backend Integration**: Uses Django and PostgreSQL, offering a clean structure for further application development.
+The backend is designed to serve **RESTful APIs** for use in frontend applications — especially **mobile apps** showing football fixtures in a calendar view.
+
+---
+
+## ✨ Key Features
+
+- 🏆 **Matchday & Season Organization**: Matches are grouped by competition, season, and matchday.  
+- 📅 **RESTful API Support**: Easily integrates with frontend clients via ready-to-use endpoints.  
+- 🔄 **Scheduled Match Updates**: Automatically fetches and updates matches from your own JSON repository.  
+- 🗂️ **Django + PostgreSQL Stack**: Robust and extensible backend foundation.  
 
 ---
 
 ## 🛋️ Installation
 
 ### Prerequisites
-- Python 3.x
-- Django
-- psycopg2 (for PostgreSQL integration)
-- Requests (for fetching data)
+
+- Python 3.x  
+- Django  
+- PostgreSQL  
+- `psycopg2` (for PostgreSQL integration)  
+- `requests` (if needed for custom fetching)  
 
 ### Install Dependencies
 
@@ -34,94 +42,106 @@ pip install -r requirements.txt
 
 ## 💻 Usage
 
-1. **Set Up the Database**:  
-   First, configure the `DATABASES` setting in `settings.py` with your PostgreSQL credentials.
+1. **Set Up the Database**  
+   Update your PostgreSQL credentials in `settings.py` under the `DATABASES` section.
 
-2. **Apply Database Migrations**:  
-   Run the following command to set up your database schema:
+2. **Apply Migrations**
+
    ```bash
    python manage.py migrate
    ```
 
-3. **Fetch and Update Matches**:  
-   To fetch the latest match data from the public JSON file and update the database:
+3. **Update Matches from GitHub JSON Repo**  
+   Match data is pulled from `football_calendar_project`, already parsed into JSON format.  
+   Run:
+
    ```bash
-   python manage.py fetch_matches
+   python manage.py update_matches
    ```
 
-4. **Run the Development Server**:  
-   Start the Django development server:
+4. **Run the Server**
+
    ```bash
    python manage.py runserver
    ```
 
-5. **Access Match Data**:  
-   Once the data is fetched, you can query the database for match information or expose it via Django REST APIs for frontend applications.
+5. **Consume the API**  
+   REST endpoints (e.g., `/api/matches/`) expose match data to the frontend.  
+   You can filter by date, league, or team.
 
 ---
 
-## 🧠 Data Structure
+## 🧠 Data Model
 
-The database will store match data in tables with the following key fields:
+- **Match**
+  - `home_team` / `away_team`: ForeignKeys to Team  
+  - `date`: Match datetime  
+  - `score_home` / `score_away`: Final score (nullable)  
+  - `is_cancelled`: Boolean  
+  - `matchday`: String or round name  
+  - `league`: ForeignKey to League  
+  - `season`: String (e.g., “2023/24”)  
 
-- **Match**:
-  - `home_team`: ForeignKey to the Team model.
-  - `away_team`: ForeignKey to the Team model.
-  - `date`: DateTime field for match date and time.
-  - `score_home`: Integer for home team score.
-  - `score_away`: Integer for away team score.
-  - `competition`: String for competition name (e.g., English Premier League).
-  - `season`: String for the season (e.g., 2023/24).
+- **Team**
+  - `name`: Team name  
 
-- **Team**:
-  - `name`: Name of the football team (e.g., Manchester United).
-  - `country`: Country of the team (e.g., England).
-
----
-
-## 📝 Key Functions
-
-### ✨ Data Extraction & Processing
-- **`fetch_and_update_matches()`** → Fetches the latest match data from a JSON source, processes it, and updates the database with the latest results.
-- **`get_or_create_teams()`** → Fetches or creates teams in the database based on the match data.
-
-### 🗃️ Database Management
-- The backend handles automatic database updates, ensuring data is synchronized with the latest match results.
-- The system checks for existing matches and updates them if the data has changed (e.g., updated score, match time).
+- **League**
+  - `name`: League or competition name  
 
 ---
 
-## 💪 Future Enhancements
+## ⚙️ API Overview
 
-- 🌍 **Expand League Support**: Add support for more football leagues and competitions.
-- 📅 **Match Reminders**: Integrate match reminders for upcoming fixtures.
-- 📝 **Match Analytics**: Implement match summaries and team performance analysis.
+Example endpoints (depending on your URLs setup):
+
+- `GET /api/matches/` – List all matches  
+- `GET /api/matches/?date=2025-04-17` – Filter by date  
+- `GET /api/matches/?league=UEFA Europa League` – Filter by league  
+- `GET /api/teams/` – List of teams  
+- `GET /api/leagues/` – List of leagues  
+
+All endpoints return JSON, ready for mobile or web consumption.
+
+---
+
+## 🔁 Automatic Updates
+
+This project includes a management command (`update_matches`) that clones your `football_calendar_project`,  
+reads pre-parsed JSON files, and updates the database accordingly.
+
+This can be scheduled daily via **GitHub Actions** or any other cron system.
+
+---
+
+## 🛠 Future Plans
+
+- 📲 OAuth or token-based user auth for saving favorites  
+- ⏰ Push notifications for upcoming fixtures  
+- 📊 Stats & historical analysis per team  
 
 ---
 
 ## 🏅 Contribution
 
-This is a **work-in-progress** project, and contributions are welcome!  
+Feel free to contribute!
 
-1. **Fork** the repository  
-2. **Clone** your fork:  
-   ```bash
-   git clone https://github.com/your-username/football_calendar_backend.git
-   ```
-3. Create a **feature branch**:  
-   ```bash
-   git checkout -b feature-enhancement
-   ```
-4. **Push** changes & submit a **pull request**
+```bash
+# Fork the repo
+git clone https://github.com/your-username/football_calendar_backend.git
+git checkout -b my-feature
+```
+
+Then open a Pull Request. All contributions are welcome!
 
 ---
 
-## 🏁 Credits
+## 👤 Credits
 
-Project created by **Gabriele Meucci**.  
-
-Data sourced from publicly available football match fixtures in JSON format.
+Developed by **Gabriele Meucci**  
+Match data by **openfootball**, pre-processed in [**football_calendar_project**](https://github.com/walele993/football_calendar_project)
+Deployed using [Render](https://render.com) for the PostgreSQL database  
+and [Vercel](https://vercel.com) for hosting the RESTful API endpoints
 
 ---
 
-*Ready to manage and organize football match data in the easiest way possible? Let’s get started!* ⚽🔥
+*Power your football calendar apps with structured, clean data — all in one place!* ⚽🔥
