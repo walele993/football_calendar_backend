@@ -42,7 +42,7 @@ class MatchListView(generics.ListCreateAPIView):
                 models.Q(home_team__id=team_id) | models.Q(away_team__id=team_id)
             )
 
-        return queryset
+        return queryset[:75]
 
 
 # View per visualizzare i dettagli di una singola partita
