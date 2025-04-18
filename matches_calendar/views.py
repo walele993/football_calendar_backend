@@ -7,6 +7,15 @@ from rest_framework import generics
 from .models import Match, League
 from .serializers import MatchSerializer, LeagueSerializer
 
+# View per visualizzare tutte le squadre
+class TeamListView(generics.ListCreateAPIView):
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
+
+class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
+
 # View per visualizzare tutte le leghe
 class LeagueListView(generics.ListCreateAPIView):
     queryset = League.objects.all()
