@@ -121,41 +121,43 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                 home_team, _ = Team.objects.get_or_create(name=home_team_name)
                 away_team, _ = Team.objects.get_or_create(name=away_team_name)
 
-                match, created = Match.objects.update_or_create(
+                match, created = Match.objects.get_or_create(
                     matchday=md_name,
                     home_team=home_team,
                     away_team=away_team,
                     league=league,
                     season=season,
-                    defaults={
-                        "date": dt,
-                        "score_home": score_home,
-                        "score_away": score_away,
-                        "is_cancelled": is_cancelled,
-                    }
                 )
-
+                
                 if created:
+                    # Se il match è stato creato (è un nuovo record), salviamo i dati
+                    match.date = dt
+                    match.score_home = score_home
+                    match.score_away = score_away
+                    match.is_cancelled = is_cancelled
+                    match.save()  # Salviamo il nuovo match nel database
                     created_matches += 1
                     logger.info(f"Created match: {home_team_name} vs {away_team_name} on {md_name}")
                 else:
-                    existing = Match.objects.get(
-                        matchday=md_name,
-                        home_team=home_team,
-                        away_team=away_team,
-                        league=league,
-                        season=season,
-                    )
+                    # Se il match esiste già, controlliamo se i dati sono cambiati
                     if (
-                        existing.date != dt or
-                        existing.score_home != score_home or
-                        existing.score_away != score_away or
-                        existing.is_cancelled != is_cancelled
+                        match.date != dt or
+                        match.score_home != score_home or
+                        match.score_away != score_away or
+                        match.is_cancelled != is_cancelled
                     ):
+                        # Se i dati sono cambiati, aggiorniamo il record
+                        match.date = dt
+                        match.score_home = score_home
+                        match.score_away = score_away
+                        match.is_cancelled = is_cancelled
+                        match.save()  # Salviamo l'aggiornamento
                         updated_matches += 1
                         logger.info(f"Updated match: {home_team_name} vs {away_team_name} on {md_name}")
                     else:
+                        # Se i dati non sono cambiati, non facciamo nulla
                         logger.info(f"No changes: {home_team_name} vs {away_team_name} on {md_name}")
+
 
         logger.info(f"Finished processing {json_file}")
 
