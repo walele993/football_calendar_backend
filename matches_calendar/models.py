@@ -24,4 +24,12 @@ class Match(models.Model):
     is_cancelled = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.home_team} vs {self.away_team} ({self.competition.name})"
+        return f"{self.home_team} vs {self.away_team} ({self.league.name})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['date']),  # Aggiunge un indice sul campo 'date'
+            models.Index(fields=['league']),  # Aggiunge un indice sul campo 'league'
+            models.Index(fields=['home_team']),  # Aggiunge un indice sul campo 'home_team'
+            models.Index(fields=['away_team']),  # Aggiunge un indice sul campo 'away_team'
+        ]
