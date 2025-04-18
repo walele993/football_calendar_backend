@@ -5,13 +5,13 @@ from .models import Match, League, Team
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
-        fields = ['id', 'name', 'country']
+        fields = ['id', 'name']
 
 # Serializer per la Lega
 class LeagueSerializer(serializers.ModelSerializer):
     class Meta:
         model = League
-        fields = ['id', 'name', 'color']
+        fields = ['id', 'name']
 
 # Serializer per la Partita
 class MatchSerializer(serializers.ModelSerializer):
