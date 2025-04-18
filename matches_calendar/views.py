@@ -45,7 +45,7 @@ class MatchListView(generics.ListCreateAPIView):
         queryset = queryset.order_by('date')
 
         # Limita la quantità di risultati per evitare query lente
-        return queryset[:75]
+        return queryset[:5]
 
 
 # View per visualizzare i dettagli di una singola partita
