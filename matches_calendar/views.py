@@ -28,7 +28,7 @@ class MatchListView(generics.ListCreateAPIView):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        queryset = Match.objects.all().order_by('date')
+        queryset = Match.objects.all()
 
         # Filtro per lega (opzionale)
         league_id = self.request.query_params.get('league')
@@ -42,6 +42,9 @@ class MatchListView(generics.ListCreateAPIView):
                 models.Q(home_team__id=team_id) | models.Q(away_team__id=team_id)
             )
 
+        queryset = queryset.order_by('date')
+
+        # Limita la quantità di risultati per evitare query lente
         return queryset[:75]
 
 
