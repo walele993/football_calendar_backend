@@ -4,8 +4,8 @@ from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
-from .models import Match, League
-from .serializers import MatchSerializer, LeagueSerializer
+from .models import Match, League. Teams
+from .serializers import MatchSerializer, LeagueSerializer, TeamSerializer
 
 # View per visualizzare tutte le squadre
 class TeamListView(generics.ListCreateAPIView):
