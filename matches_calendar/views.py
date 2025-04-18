@@ -42,6 +42,17 @@ class MatchListView(generics.ListCreateAPIView):
                 models.Q(home_team__id=team_id) | models.Q(away_team__id=team_id)
             )
 
+        # Filtro per data (assicurati che sia nel formato YYYY-MM-DD)
+        date = self.request.query_params.get('date')
+        if date:
+            try:
+                # Converte la data in un oggetto date
+                filter_date = timezone.datetime.strptime(date, '%Y-%m-%d').date()
+                queryset = queryset.filter(date=filter_date)
+            except ValueError:
+                # Gestisce errori di formattazione della data
+                pass
+
         queryset = queryset.order_by('date')
 
         # Limita la quantità di risultati per evitare query lente
