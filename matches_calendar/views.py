@@ -22,7 +22,7 @@ class LeagueListView(generics.ListCreateAPIView):
     serializer_class = LeagueSerializer
 
 class MatchListView(generics.ListCreateAPIView):
-    queryset = Match.objects.all()
+    queryset = Match.objects.all().order_by('-date')
     serializer_class = MatchSerializer
 
     def get_queryset(self):
