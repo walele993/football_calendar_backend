@@ -5,10 +5,11 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
 from .models import Match, League, Team
 from .serializers import MatchSerializer, LeagueSerializer, TeamSerializer
 
-# View per visualizzare tutte le squadre
+# --- Squadre ---
 class TeamListView(generics.ListCreateAPIView):
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
@@ -17,60 +18,58 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
 
-# View per visualizzare tutte le leghe
+# --- Leghe ---
 class LeagueListView(generics.ListCreateAPIView):
     queryset = League.objects.all()
     serializer_class = LeagueSerializer
 
-from rest_framework.pagination import PageNumberPagination
+class LeagueDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = League.objects.all()
+    serializer_class = LeagueSerializer
 
+# --- Partite ---
 class MatchListView(generics.ListCreateAPIView):
     serializer_class = MatchSerializer
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        queryset = Match.objects.all()
+        queryset = Match.objects.select_related('home_team', 'away_team', 'league').all()
 
-        # Filtro per lega (opzionale)
         league_id = self.request.query_params.get('league')
         if league_id:
             queryset = queryset.filter(league__id=league_id)
 
-        # Filtro per squadra (sia in casa che fuori)
         team_id = self.request.query_params.get('team')
         if team_id:
             queryset = queryset.filter(
                 models.Q(home_team__id=team_id) | models.Q(away_team__id=team_id)
             )
 
-        # Filtro per data (assicurati che sia nel formato YYYY-MM-DD)
         date = self.request.query_params.get('date')
         if date:
             try:
-                # Converte la data in un oggetto date
                 filter_date = timezone.datetime.strptime(date, '%Y-%m-%d').date()
                 queryset = queryset.filter(date=filter_date)
             except ValueError:
-                # Gestisce errori di formattazione della data
                 pass
 
-        queryset = queryset.order_by('date')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date and end_date:
+            try:
+                start = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+                end = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(date__range=(start, end))
+            except ValueError:
+                pass
 
-        # Limita la quantità di risultati per evitare query lente
-        return queryset
+        return queryset.order_by('date')
 
-
-# View per visualizzare i dettagli di una singola partita
 class MatchDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Match.objects.all()
+    queryset = Match.objects.select_related('home_team', 'away_team', 'league').all()
     serializer_class = MatchSerializer
 
-# View per visualizzare una lista delle leghe
-class LeagueDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = League.objects.all()
-    serializer_class = LeagueSerializer
-
-# View per visualizzare una lista delle partite da un file locale (se necessario)
+# --- Partite da file JSON locale (debug/test) ---
 class MatchListFromLocalFile(APIView):
     def get(self, request):
         file_path = os.path.join("matches_calendar", "data", "all_matches.json")
