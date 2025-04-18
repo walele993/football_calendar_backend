@@ -21,12 +21,14 @@ class LeagueListView(generics.ListCreateAPIView):
     queryset = League.objects.all()
     serializer_class = LeagueSerializer
 
+from rest_framework.pagination import PageNumberPagination
+
 class MatchListView(generics.ListCreateAPIView):
-    queryset = Match.objects.all().order_by('-date')
     serializer_class = MatchSerializer
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = Match.objects.all().order_by('date')
 
         # Filtro per lega (opzionale)
         league_id = self.request.query_params.get('league')
@@ -41,6 +43,7 @@ class MatchListView(generics.ListCreateAPIView):
             )
 
         return queryset
+
 
 # View per visualizzare i dettagli di una singola partita
 class MatchDetailView(generics.RetrieveUpdateDestroyAPIView):
