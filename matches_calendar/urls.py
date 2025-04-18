@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LeagueListView, MatchListView, MatchDetailView, LeagueDetailView, MatchListFromLocalFile
+from .views import LeagueListView, MatchListView, TeamListView, MatchDetailView, LeagueDetailView, TeamDetailView, MatchListFromLocalFile
 
 urlpatterns = [
     path('leagues/', LeagueListView.as_view(), name='league-list'),
