@@ -138,9 +138,7 @@ Then open a Pull Request. All contributions are welcome!
 ## 👤 Credits
 
 Developed by **Gabriele Meucci**  
-Match data by **openfootball**, pre-processed in [**football_calendar_project**](https://github.com/walele993/football_calendar_project)
-Deployed using [Render](https://render.com) for the PostgreSQL database  
-and [Vercel](https://vercel.com) for hosting the RESTful API endpoints
+Match data by **openfootball**, pre-processed in [**football_calendar_project**](https://github.com/walele993/football_calendar_project); deployed using [Render](https://render.com) for the PostgreSQL database and [Vercel](https://vercel.com) for hosting the RESTful API endpoints
 
 ---
 
