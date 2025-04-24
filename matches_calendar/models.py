@@ -15,6 +15,7 @@ class League(models.Model):
 class Match(models.Model):
     matchday = models.CharField(max_length=255, null=True, blank=True)
     date = models.DateField(null=True)
+    time = models.TimeField(null=True, blank=True)
     home_team = models.ForeignKey(Team, related_name="home_matches", on_delete=models.CASCADE)
     away_team = models.ForeignKey(Team, related_name="away_matches", on_delete=models.CASCADE)
     score_home = models.IntegerField(null=True, blank=True)

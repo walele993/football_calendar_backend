@@ -131,7 +131,9 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                 
                 if created:
                     # Se il match è stato creato (è un nuovo record), salviamo i dati
-                    match.date = dt
+                    if dt:
+                        match.date = dt.date()  # Salva solo la data
+                        match.time = dt.time()  # Salva solo l'orario
                     match.score_home = score_home
                     match.score_away = score_away
                     match.is_cancelled = is_cancelled
@@ -141,13 +143,16 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                 else:
                     # Se il match esiste già, controlliamo se i dati sono cambiati
                     if (
-                        match.date != dt or
+                        match.date != dt.date() or  # Controlla la data
+                        match.time != dt.time() or  # Controlla l'orario
                         match.score_home != score_home or
                         match.score_away != score_away or
                         match.is_cancelled != is_cancelled
                     ):
                         # Se i dati sono cambiati, aggiorniamo il record
-                        match.date = dt
+                        if dt:
+                            match.date = dt.date()
+                            match.time = dt.time()
                         match.score_home = score_home
                         match.score_away = score_away
                         match.is_cancelled = is_cancelled
