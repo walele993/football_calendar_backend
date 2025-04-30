@@ -20,7 +20,7 @@ def on_rm_error(func, path, exc_info):
     except Exception as e:
         logger.error(f"Failed to remove {path}: {e}")
 
-def is_season_valid(filename, min_season_start=2023):
+def is_season_valid(filename, min_season_start=2024):
     match = re.match(r"\((\d{4})_\d{2}\)", os.path.basename(filename))
     if match:
         year = int(match.group(1))
