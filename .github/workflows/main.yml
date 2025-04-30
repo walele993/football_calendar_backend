@@ -2,7 +2,7 @@ name: Update Matches Nightly
 
 on:
   schedule:
-    - cron: '0 1 * * *'  
+    - cron: '0 23 * * *' 
   workflow_dispatch:     
 
 jobs:
