@@ -2,7 +2,7 @@ name: Update Matches Nightly
 
 on:
   schedule:
-    - cron: '0 23 * * *'  # ogni sera alle 23:00 UTC
+    - cron: '0 23 * * *'  # Ogni sera alle 23:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -22,11 +22,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pymongo
+          pip install -r requirements.txt  # Se hai un requirements.txt
 
       - name: Set MONGO_URI secret as environment variable
         run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
 
       - name: Run MongoDB update script
-        run: python matches_calendar/management/commands/update_matches.py
-        env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: |
+          export MONGO_URI=${{ secrets.MONGO_URI }}  # Assicurati che la variabile d'ambiente venga esportata
+          python -m matches_calendar.utils.update_matches_from_remote_repo
