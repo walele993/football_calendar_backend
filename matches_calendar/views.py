@@ -10,7 +10,10 @@ from .models import Match, League, Team
 from .serializers import MatchSerializer, LeagueSerializer, TeamSerializer
 
 from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.utils.dateparse import parse_date
 from utils.mongo import matches_collection
+from datetime import datetime
 
 # --- Squadre ---
 class TeamListView(generics.ListCreateAPIView):
@@ -86,13 +89,66 @@ class MatchListFromLocalFile(APIView):
             return Response({"error": "Error decoding JSON file."}, status=500)
 
 @api_view(["GET"])
-def MatchesFromMongo(request):
+def all_matches_mongo(request):
+    matches = list(matches_collection.find({}, {"_id": 0}).sort("date", 1).limit(1000))
+    return Response(matches)
+
+@api_view(["GET"])
+def all_leagues_mongo(request):
+    leagues = matches_collection.distinct("league")
+    return Response(leagues)
+
+@api_view(["GET"])
+def all_teams_mongo(request):
+    teams = matches_collection.aggregate([
+        {"$project": {"teams": ["$home_team", "$away_team"]}},
+        {"$unwind": "$teams"},
+        {"$group": {"_id": "$teams.id", "name": {"$first": "$teams.name"}}},
+        {"$project": {"id": "$_id", "name": 1, "_id": 0}},
+        {"$sort": {"name": 1}}
+    ])
+    return Response(list(teams))
+
+@api_view(["GET"])
+def filter_matches_mongo(request):
+    query = {}
+    
+    # Filter by league
+    league_id = request.query_params.get("league")
+    if league_id:
+        try:
+            query["league.id"] = int(league_id)
+        except ValueError:
+            return Response({"error": "Invalid league id"}, status=400)
+
+    # Filter by team (either home or away)
+    team_id = request.query_params.get("team")
+    if team_id:
+        try:
+            team_id = int(team_id)
+            query["$or"] = [{"home_team.id": team_id}, {"away_team.id": team_id}]
+        except ValueError:
+            return Response({"error": "Invalid team id"}, status=400)
+
+    # Filter by single date
     date = request.query_params.get("date")
-    if not date:
-        return Response({"error": "Missing date"}, status=400)
+    if date:
+        parsed_date = parse_date(date)
+        if parsed_date:
+            query["date"] = parsed_date.strftime("%Y-%m-%d")
+        else:
+            return Response({"error": "Invalid date format"}, status=400)
 
-    matches = list(matches_collection.find({"date": date}))
-    for match in matches:
-        match["_id"] = str(match["_id"])  # Per rendere serializzabile
+    # Filter by date range
+    start = request.query_params.get("start_date")
+    end = request.query_params.get("end_date")
+    if start and end:
+        try:
+            start_d = datetime.strptime(start, "%Y-%m-%d").date().isoformat()
+            end_d = datetime.strptime(end, "%Y-%m-%d").date().isoformat()
+            query["date"] = {"$gte": start_d, "$lte": end_d}
+        except ValueError:
+            return Response({"error": "Invalid date range format"}, status=400)
 
+    matches = list(matches_collection.find(query, {"_id": 0}).sort("date", 1).limit(1000))
     return Response(matches)
