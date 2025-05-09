@@ -1,5 +1,12 @@
 import os
-from utils import update_matches_from_remote_repo
+import os
+import sys
+
+# Aggiungi la cartella del modulo 'matches_calendar' al path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+from matches_calendar.utils import update_matches_from_remote_repo
+
 
 def main():
     repo_url = "https://github.com/walele993/football_calendar_project.git"
