@@ -14,6 +14,9 @@ from rest_framework.response import Response
 from django.utils.dateparse import parse_date
 from utils.mongo import matches_collection
 from datetime import datetime
+from utils.mongo import create_indexes
+
+create_indexes()
 
 # --- Squadre ---
 class TeamListView(generics.ListCreateAPIView):
