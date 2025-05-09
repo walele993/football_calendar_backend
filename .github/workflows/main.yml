@@ -30,4 +30,4 @@ jobs:
       - name: Run MongoDB update script
         run: |
           export MONGO_URI=${{ secrets.MONGO_URI }}  # Assicurati che la variabile d'ambiente venga esportata
-          python -m matches_calendar.utils.update_matches_from_remote_repo
+          python matches_calendar/management/commands/update_matches.py  # Esegui direttamente lo script
