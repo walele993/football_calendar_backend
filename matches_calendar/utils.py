@@ -5,13 +5,16 @@ import shutil
 import stat
 import subprocess
 import time
-from datetime import datetime
-from matches_calendar.models import Team, Match, League
-import logging
 import re
+from datetime import datetime
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+
 
 def on_rm_error(func, path, exc_info):
     try:
@@ -20,6 +23,7 @@ def on_rm_error(func, path, exc_info):
     except Exception as e:
         logger.error(f"Failed to remove {path}: {e}")
 
+
 def is_season_valid(filename, min_season_start=2024):
     match = re.match(r"\((\d{4})_\d{2}\)", os.path.basename(filename))
     if match:
@@ -27,66 +31,53 @@ def is_season_valid(filename, min_season_start=2024):
         return year >= min_season_start
     return False
 
-def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json'):
+
+def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json', mongo_uri=None):
+    if not mongo_uri:
+        raise ValueError("Missing MongoDB URI")
+
     start_time = time.time()
     temp_dir = 'temp_repo'
+
+    client = MongoClient(mongo_uri)
+    db = client["football_calendar"]
+    matches_col = db["matches"]
 
     logger.info("Starting match update process...")
     logger.info(f"Repository: {repo_url}")
     logger.info(f"Branch: {branch}")
     logger.info(f"Target folder inside repo: {folder}")
 
-    # Step 1: Delete temp repo if exists
+    # Cleanup temp repo
     if os.path.exists(temp_dir):
-        logger.info("Removing existing temp directory...")
-        try:
-            shutil.rmtree(temp_dir, onerror=on_rm_error)
-        except Exception as e:
-            logger.error(f"Error removing temp directory: {e}")
-            return
+        shutil.rmtree(temp_dir, onerror=on_rm_error)
 
-    # Step 2: Clone repo
     try:
-        logger.info("Cloning repository...")
         subprocess.run(['git', 'clone', '--depth', '1', '-b', branch, repo_url, temp_dir], check=True)
-        logger.info("Clone completed.")
     except Exception as e:
         logger.error(f"Error cloning repository: {e}")
         return
 
-    # Step 3: Check for parsed_json folder
     parsed_json_path = os.path.join(temp_dir, folder)
     if not os.path.exists(parsed_json_path):
         logger.error(f"Folder '{folder}' not found in the cloned repo.")
-        return f"Folder '{folder}' not found in the cloned repo."
+        return
 
-    all_json_files = glob.glob(os.path.join(parsed_json_path, '*.json'))
-    logger.info(f"Found {len(all_json_files)} .json files in '{folder}'.")
+    json_files = [f for f in glob.glob(os.path.join(parsed_json_path, '*.json')) if is_season_valid(f)]
+    logger.info(f"Found {len(json_files)} valid .json files.")
 
-    json_files = [f for f in all_json_files if is_season_valid(f)]
-    logger.info(f"Valid JSON files (from 2023 onwards): {len(json_files)}")
-
-    total_files = len(json_files)
-    total_matches = 0
-    created_matches = 0
-    updated_matches = 0
-
-    if total_files == 0:
-        logger.warning("No valid JSON files found.")
-        return "No valid JSON files found."
+    inserted = 0
+    updated = 0
 
     for json_file in json_files:
-        logger.info(f"Processing {json_file}")
         try:
             with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except Exception as e:
-            logger.error(f"Cannot load {json_file}: {e}")
+            logger.error(f"Failed to load JSON file {json_file}: {e}")
             continue
 
         league_name = data.get("league", "Unknown League")
-        league, _ = League.objects.get_or_create(name=league_name)
-
         season = data.get("season", "Unknown Season")
         matchdays = data.get("matchdays", [])
 
@@ -94,88 +85,62 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
             md_name = md.get("matchday", "Unknown Matchday")
             matches = md.get("matches", [])
 
-            for match_data in matches:
-                total_matches += 1
-                date_str = match_data.get("date")
-                time_str = match_data.get("time")
-                home_team_name = match_data.get("home_team")
-                away_team_name = match_data.get("away_team")
-                result = match_data.get("result", {})
-                is_cancelled = match_data.get("cancelled", False)
-
+            for m in matches:
+                date_str = m.get("date")
+                time_str = m.get("time", "00:00")
                 try:
                     dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-                except Exception:
+                except:
                     dt = None
 
-                score_home = None
-                score_away = None
+                result = m.get("result", {})
+                score_home, score_away = None, None
                 if isinstance(result, dict):
                     full_time = result.get("full_time")
-                    if full_time:
+                    if full_time and '-' in full_time:
                         try:
                             score_home, score_away = map(int, full_time.split('-'))
-                        except Exception:
+                        except:
                             pass
 
-                home_team, _ = Team.objects.get_or_create(name=home_team_name)
-                away_team, _ = Team.objects.get_or_create(name=away_team_name)
+                home_team = m.get("home_team")
+                away_team = m.get("away_team")
 
-                match, created = Match.objects.get_or_create(
-                    matchday=md_name,
-                    home_team=home_team,
-                    away_team=away_team,
-                    league=league,
-                    season=season,
-                )
-                
-                if created:
-                    # Se il match è stato creato (è un nuovo record), salviamo i dati
-                    if dt:
-                        match.date = dt.date()  # Salva solo la data
-                        match.time = dt.time()  # Salva solo l'orario
-                    match.score_home = score_home
-                    match.score_away = score_away
-                    match.is_cancelled = is_cancelled
-                    match.save()  # Salviamo il nuovo match nel database
-                    created_matches += 1
-                    logger.info(f"Created match: {home_team_name} vs {away_team_name} on {md_name}")
+                match_doc = {
+                    "date": dt.strftime("%Y-%m-%d") if dt else None,
+                    "time": dt.strftime("%H:%M:%S") if dt else None,
+                    "matchday": md_name,
+                    "season": season,
+                    "is_cancelled": m.get("cancelled", False),
+                    "score_home": score_home,
+                    "score_away": score_away,
+                    "home_team": {"id": hash(home_team) % 10000, "name": home_team},
+                    "away_team": {"id": hash(away_team) % 10000, "name": away_team},
+                    "league": {"id": hash(league_name) % 10000, "name": league_name},
+                }
+
+                query = {
+                    "home_team.name": home_team,
+                    "away_team.name": away_team,
+                    "season": season,
+                    "matchday": md_name,
+                    "league.name": league_name
+                }
+
+                existing = matches_col.find_one(query)
+                if existing:
+                    matches_col.update_one({"_id": existing["_id"]}, {"$set": match_doc})
+                    updated += 1
                 else:
-                    # Se il match esiste già, controlliamo se i dati sono cambiati
-                    if (
-                        match.date != dt.date() or  # Controlla la data
-                        match.time != dt.time() or  # Controlla l'orario
-                        match.score_home != score_home or
-                        match.score_away != score_away or
-                        match.is_cancelled != is_cancelled
-                    ):
-                        # Se i dati sono cambiati, aggiorniamo il record
-                        if dt:
-                            match.date = dt.date()
-                            match.time = dt.time()
-                        match.score_home = score_home
-                        match.score_away = score_away
-                        match.is_cancelled = is_cancelled
-                        match.save()  # Salviamo l'aggiornamento
-                        updated_matches += 1
-                        logger.info(f"Updated match: {home_team_name} vs {away_team_name} on {md_name}")
-                    else:
-                        # Se i dati non sono cambiati, non facciamo nulla
-                        logger.info(f"No changes: {home_team_name} vs {away_team_name} on {md_name}")
-
-
-        logger.info(f"Finished processing {json_file}")
+                    matches_col.insert_one(match_doc)
+                    inserted += 1
 
     # Cleanup
     try:
         shutil.rmtree(temp_dir, onerror=on_rm_error)
-        logger.info("Temp directory removed.")
     except Exception as e:
-        logger.error(f"Cleanup error: {e}")
+        logger.warning(f"Failed to delete temp dir: {e}")
 
-    end_time = time.time()
-    logger.info(f"Update complete in {round(end_time - start_time, 2)}s")
-    logger.info(f"Files processed: {total_files}")
-    logger.info(f"Matches total: {total_matches}, created: {created_matches}, updated: {updated_matches}")
-
-    return "Matches updated successfully!"
+    logger.info(f"Update completed in {round(time.time() - start_time, 2)}s")
+    logger.info(f"Inserted: {inserted}, Updated: {updated}")
+    return "MongoDB update completed."
