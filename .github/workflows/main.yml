@@ -27,6 +27,6 @@ jobs:
         run: echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
 
       - name: Run MongoDB update script
-        run: python scripts/update_matches_from_remote_repo.py
+        run: python matches_calendar/utils.py
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
