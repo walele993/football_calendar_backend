@@ -155,3 +155,4 @@ def filter_matches_mongo(request):
 
     matches = list(matches_collection.find(query, {"_id": 0}).sort("date", 1).limit(1000))
     return Response(matches)
+ 
