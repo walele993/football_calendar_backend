@@ -9,6 +9,9 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Match, League, Team
 from .serializers import MatchSerializer, LeagueSerializer, TeamSerializer
 
+from rest_framework.decorators import api_view
+from utils.mongo import matches_collection
+
 # --- Squadre ---
 class TeamListView(generics.ListCreateAPIView):
     queryset = Team.objects.all()
@@ -81,3 +84,15 @@ class MatchListFromLocalFile(APIView):
             return Response({"error": "Local JSON file not found."}, status=404)
         except json.JSONDecodeError:
             return Response({"error": "Error decoding JSON file."}, status=500)
+
+@api_view(["GET"])
+def MatchesFromMongo(request):
+    date = request.query_params.get("date")
+    if not date:
+        return Response({"error": "Missing date"}, status=400)
+
+    matches = list(matches_collection.find({"date": date}))
+    for match in matches:
+        match["_id"] = str(match["_id"])  # Per rendere serializzabile
+
+    return Response(matches)
