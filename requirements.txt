@@ -3,3 +3,4 @@ djangorestframework
 psycopg2-binary
 whitenoise
 pymongo>=4.0
+python-dotenv==1.0.1

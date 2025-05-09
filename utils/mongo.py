@@ -1,7 +1,9 @@
-# utils/mongo.py
-import os
 from pymongo import MongoClient
+import os
 
-client = MongoClient(os.environ["MONGODB_URI"])  # la URI verrà da Vercel
-db = client["football_db"]  # nome del tuo database MongoDB
-matches_collection = db["matches"]  # la "tabella" delle partite
+MONGO_URI = os.getenv("MONGODB_URI")
+client = MongoClient(MONGO_URI)
+
+# Nome del database e della collezione
+db = client["football_db"]
+matches_collection = db["matches"]
