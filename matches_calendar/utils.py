@@ -120,11 +120,24 @@ def update_matches_from_remote_repo(repo_url, branch='main', folder='parsed_json
                 }
 
                 query = {
-                    "home_team.name": home_team,
-                    "away_team.name": away_team,
+                    "date": dt.strftime("%Y-%m-%d") if dt else None,
                     "season": season,
                     "matchday": md_name,
-                    "league.name": league_name
+                    "league.name": league_name,
+                    "$and": [
+                        {
+                            "$or": [
+                                {"home_team.name": home_team},
+                                {"home_team.name": "N.N."}
+                            ]
+                        },
+                        {
+                            "$or": [
+                                {"away_team.name": away_team},
+                                {"away_team.name": "N.N."}
+                            ]
+                        }
+                    ]
                 }
 
                 existing = matches_col.find_one(query)
